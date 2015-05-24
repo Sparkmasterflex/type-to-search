@@ -93,10 +93,11 @@ class TypeToSeach.Views.SearchView extends Backbone.View
     _.extend {
       handle_results: this.default_handle_results
       no_results: this.default_no_results
-      select_result: this.select_result
+      selected_result: this.set_selected_result
       create: this.create_entered
+      label: this.label
       allow_create: true
-      logging: false
+      debug: false
       styles: false
     }, options
 
@@ -119,7 +120,7 @@ class TypeToSeach.Views.SearchView extends Backbone.View
   ###
   template: ->
     """
-      <label for="#{this.options.input}">#{this.label()}</label>
+      <label for="#{this.options.input}">#{this.options.label()}</label>
       <input id='#{this.options.input}' type="search" name="#{this.options.input}" autocomplete="false" placeholder="Type to Search">
       <input id='#{this.options.input}_id' type="hidden" name="#{this.options.input}_id">
     """
@@ -222,12 +223,13 @@ class TypeToSeach.Views.SearchView extends Backbone.View
 
   select_enter_result: ->
     this.selected = this.collection.get($('.tts-active').data('id'))
-    this.set_selected_result()
+    this.selected_result()
 
   set_selected_result: ->
     this.clear_search true
     this.$("input##{this.options.input}").val this.selected.get("#{this.selected.label_attr}")
     this.$("input##{this.options.input}_id").val this.selected.get('id')
+    this.selected
 
 
   ###===================
