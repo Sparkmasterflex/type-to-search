@@ -29,7 +29,6 @@ class TypeToSeach.Collections.Search extends Backbone.Collection
       _.each this.filters, (val, key) => simple[key] = @filters[key] if val? and ['search'].indexOf(key) < 0
       models = if $.isEmptyObject(simple) then this.models else this.where(simple)
       models = this.search(models, this.filters.search) if this.filters.search?
-
       models
 
 
@@ -45,8 +44,8 @@ class TypeToSeach.Collections.Search extends Backbone.Collection
     selected
 
   found_search_term: (item, attr, reg_ex) ->
-    if typeof attr is 'string' and item.get(attr)?
-      return reg_ex.test item.get(attr).toLowerCase()
+    if typeof attr is 'string'
+      return item.get(attr)? and reg_ex.test(item.get(attr).toLowerCase())
     else
       console.log "Getting an error? maybe attributes in searchable doesn't exist" if attr is 'string'
       key = Object.keys(attr)[0]
@@ -77,14 +76,13 @@ class TypeToSeach.Views.SearchView extends Backbone.View
     'click .tts-filtered-collection li': 'select_clicked_result'
 
   initialize: (options) ->
-    _.bindAll this, 'render', 'error_message', 'default_handle_results'
+    _.bindAll this, 'render', 'error_message', 'default_handle_results', 'default_no_results', 'create_entered'
     this.options = this.merge_options(options)
     # this.start_val = this.input.val()
 
   render: ->
     this.$el.html this.template()
     _.each this.options.classes, (c) => this.$el.addClass(c)
-    this.$search = this.$("input[type=search]")
     this.fetch_collection()
     this
 
@@ -96,6 +94,8 @@ class TypeToSeach.Views.SearchView extends Backbone.View
       handle_results: this.default_handle_results
       no_results: this.default_no_results
       select_result: this.select_result
+      create: this.create_entered
+      allow_create: true
       logging: false
       styles: false
     }, options
@@ -103,9 +103,15 @@ class TypeToSeach.Views.SearchView extends Backbone.View
   fetch_collection: ->
     this.collection = new this.options.collectionClass()
     this.collection.fetch
-      success: (collection) =>
-        console.log 'fetched!'
+      success: (collection) => @set_current_value()
       error: this.error_message
+
+  set_current_value: ->
+    this.$search = this.$("input[type=search]")
+    if this.options.currentId?
+      model = this.collection.get(this.options.currentId)
+      this.$search.val model.get(model.label_attr)
+      this.$("input##{this.options.input}_id").val this.options.currentId
 
 
   ###
@@ -150,6 +156,12 @@ class TypeToSeach.Views.SearchView extends Backbone.View
         }
         .#{this.className} .tts-filtered-collection li:last-child { border-bottom: none; }
         .#{this.className} .tts-filtered-collection li.tts-active { background-color: #ddd; }
+        .#{this.className} a.tts-add {
+          position: absolute;
+          top: #{this.$search.position().top + 3}px;
+          right: 5px;
+          z-index: 500;
+        }
       </style>
     """
 
@@ -177,14 +189,18 @@ class TypeToSeach.Views.SearchView extends Backbone.View
     _.each models, (m) -> $('ul.tts-filtered-collection').append "<li data-id='#{m.get('id')}'>#{m.get("#{m.label_attr}")}</li>"
 
   default_no_results: ->
+    unless this.$('a.tts-add').length
+      this.$search.after "<a href='#add' class='tts-add'>Add?</a>"
+      this.$('a.tts-add').click this.create_entered
     $('ul.tts-filtered-collection')
       .empty()
       .append "<li class='no-results'>No Results Found</li>"
 
   clear_search: (keep=false) ->
-    $('ul.tts-filtered-collection').remove()
-    this.$("input##{this.options.input}_id").val null
-    this.selected = null unless keep
+    $('ul.tts-filtered-collection, a.tts-add').remove()
+    unless keep
+      this.$("input##{this.options.input}_id").val null
+      this.selected = null
 
 
   ###
@@ -230,7 +246,7 @@ class TypeToSeach.Views.SearchView extends Backbone.View
       this.collection.set_filters 'search', search
       filtered = this.collection.filtered()
       if filtered.length
-        this.options.handle_results this.collection.filtered()
+        this.options.handle_results filtered
       else
         this.options.no_results()
     else
@@ -242,3 +258,17 @@ class TypeToSeach.Views.SearchView extends Backbone.View
   select_clicked_result: (e) ->
     this.selected = this.collection.get($(e.target).data('id'))
     this.set_selected_result()
+
+  create_entered: ->
+    modelClass = this.collection.model
+    attrs = {}
+    attrs[this.collection.first().label_attr] = this.$search.val()
+    this.collection.create new modelClass(attrs),
+      wait: false
+      success: (model) =>
+        @selected = model
+        @set_selected_result()
+        alert "#{model.get(model.label_attr)} was successfully created!"
+      error: this.error_message
+    false
+
