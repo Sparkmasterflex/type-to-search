@@ -187,9 +187,10 @@ class TypeToSeach.Views.SearchView extends Backbone.View
     else
       this.$search.after "<ul class='tts-filtered-collection'></ul>"
     _.each models, (m) -> $('ul.tts-filtered-collection').append "<li data-id='#{m.get('id')}'>#{m.get("#{m.label_attr}")}</li>"
+    $('ul.tts-filtered-collection')
 
   default_no_results: ->
-    unless this.$('a.tts-add').length
+    if this.options.allow_create and not this.$('a.tts-add').length
       this.$search.after "<a href='#add' class='tts-add'>Add?</a>"
       this.$('a.tts-add').click this.create_entered
     $('ul.tts-filtered-collection')
