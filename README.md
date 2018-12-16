@@ -1,8 +1,3 @@
-<script src="http://yandex.st/highlightjs/7.3/highlight.min.js"></script>
-<link rel="stylesheet" href="http://yandex.st/highlightjs/7.3/styles/github.min.css">
-<script>
-  hljs.initHighlightingOnLoad();
-</script>
 
 # Backbone.Type-to-Search
 ## Backbone.js plugin
